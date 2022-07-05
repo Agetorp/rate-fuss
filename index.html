@@ -9,12 +9,22 @@
             crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.css">
 </head>
-<body style="padding-top: 40px;padding-bottom: 40px">
+<body style="padding-top: 25px;padding-bottom: 40px">
+<div class="container" style="margin-bottom: 25px;">
+    <div class="notification is-link">
+        <div class="block">
+            <p class="is-size-4">Ett enkelt verktyg för att överblicka din personliga ökande räntekostnad</p>
+            <p>Mata in dina lån och få kommande räntehöjningar visualiserade. Lånen går automatiskt över till rörlig ränta enligt vald prognos vid villkorsändringsdatum.</p>
+            <p>Ingen data samlas in eller lagras, allt stannar på din dator.</p>
+        </div>
+    </div>
+</div>
 <div class="container" style="margin-bottom: 25px;">
     <div class="notification is-success table">
         <div class="block">
             <h2 class="is-size-4">1. Ange dina lån</h2>
         </div>
+
         <div class="columns">
             <label class="column has-text-centered is-size-5" for="amount">Lånebelopp </label>
             <label class="column has-text-centered is-size-5" for="rate">Räntesats (%)</label>
@@ -70,29 +80,6 @@
         </div>
         <div class="chart-container container" style="position: relative">
             <canvas id="chart"></canvas>
-        </div>
-    </div>
-</div>
-
-<div class="dropdown is-hoverable">
-    <div class="dropdown-trigger">
-        <input class="radio">
-        <span>Hover me</span>
-        </input>
-    </div>
-    <div class="dropdown-menu" id="dropdown-menu4" role="menu">
-        <div class="dropdown-content">
-            <div class="dropdown-item">
-                <p>"2022-01-01", '1.9 %'</p>
-                <p>"2023-01-01", '2.79 %'</p>
-                <p>"2024-01-01", '3.0 %'</p>
-                <p>"2025-01-01", '3.0 %'</p>
-                <p>"2026-01-01", '3.0 %'</p>
-                <p>"2027-01-01", '3.0 %'</p>
-                <p>"2028-01-01", '3.0 %'</p>
-                <p>"2029-01-01", '3.0 %'</p>
-                <p>"2030-01-01", '3.0 %'</p>
-            </div>
         </div>
     </div>
 </div>
