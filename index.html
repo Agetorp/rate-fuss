@@ -9,11 +9,11 @@
             crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.css">
 </head>
-<body style="padding-top: 40px">
+<body style="padding-top: 40px;padding-bottom: 40px">
 <div class="container" style="margin-bottom: 25px;">
     <div class="notification is-success table">
         <div class="block">
-            <h2 class="is-size-3">1. Ange dina lån</h2>
+            <h2 class="is-size-4">1. Ange dina lån</h2>
         </div>
         <div class="columns">
             <label class="column has-text-centered is-size-5" for="amount">Lånebelopp </label>
@@ -44,25 +44,22 @@
 </div>
 
 <div class="container" style="margin-bottom: 25px;">
-
     <div class="notification is-success">
-
-
         <div class="block">
-            <h2 class="is-size-3">2. Välj data att visa</h2>
+            <h2 class="is-size-4">2. Välj data att visa</h2>
         </div>
 
         <div class="columns">
             <label class="column is-size-5">Prognos</label>
-            <label class="column is-size-5">Datapunkt</label>
+            <label class="column is-size-5">Datapunkt 1</label>
+            <label class="column is-size-5">Datapunkt 2</label>
         </div>
 
         <div class="columns">
             <div id="forecasts" class="column control"></div>
-            <div id="fields" class="column control"></div>
+            <div id="fields-a" class="column control"></div>
+            <div id="fields-b" class="column control"></div>
         </div>
-
-
     </div>
 </div>
 
@@ -70,7 +67,7 @@
 <div class="container">
     <div class="notification is-success">
         <div class="block">
-            <h2 class="is-size-3">3. Tada!</h2>
+            <h2 class="is-size-4">3. Tada!</h2>
         </div>
         <div class="chart-container container" style="position: relative">
             <canvas id="chart"></canvas>
@@ -82,8 +79,9 @@
     let theChart;
     const RATE_FORECASTS = [
         {
-            description: "Sträcker sig till 2025. Räknar styrränta + 1.5 %. https://www.regeringen.se/49e1d3/contentassets/ed453bf24f17472e95c31dd96bf3c5a3/presentationsbilder-fran-presstraff-med-mikael-damberg-den-22-juni-2022.pdf",
-            name: "Finansdepartementet",
+            description: "Sträcker sig till 2025. Räknar styrränta + 1.5 %.",
+            link: "https://www.regeringen.se/49e1d3/contentassets/ed453bf24f17472e95c31dd96bf3c5a3/presentationsbilder-fran-presstraff-med-mikael-damberg-den-22-juni-2022.pdf",
+            name: "Finansdepartementet, 22 juni 2022",
             forecast: [
                 ["2022-01-01", '1.9 %'],
                 ["2023-01-01", '2.79 %'],
@@ -99,7 +97,8 @@
         },
         {
             description: "Sträcker sig till 2026.",
-            name: "SBAB",
+            name: "SBAB, 5 maj 2022",
+            link: "https://www.sbab.se/1/om_sbab/press/arkiv_publicering/borantenytt/2022-05-19_borantenytt_nr_3_2022.html",
             forecast: [
                 ["2022-01-01", '1.8 %'],
                 ["2023-01-01", '2.7 %'],
@@ -114,15 +113,12 @@
         }
     ]
 
-    let loans = [{
-        "rates": [["2023-08-25", "2.26%"]],
-        "repay": 1771,
-        "amount": 902805
-    }];
+    let loans = JSON.parse(localStorage.getItem("loans") || "[]");
 
+    const NONE = '- inget -';
     const AMOUNT = 'Total lån';
     const RATE_PER_MONTH = 'Ränta per månad';
-    const RATE_PER_MONTH_USING_BANK_RATE = 'Ränta per månad med bankens ränta';
+    const RATE_PER_MONTH_USING_BANK_RATE = 'Ränta per månad utan nuvarande bindningar';
     const RATE_DIFF = 'Besparing per månad p.g.a. nuvarande bindningar';
     const RATE_AND_REPAY = 'Ränta + amortering per månad';
     const AVG_RATE = 'Min snittränta';
@@ -186,9 +182,10 @@
         const fastForwardTo = (fastForwardToDate) => {
             while (currentDate.toISOString() < fastForwardToDate.toISOString()) {
                 for (let i = 0; i < internalLoans.length; i++) {
+                    const repay = Math.min(internalLoans[i].amount, internalLoans[i].repay);
                     internalLoans[i] = {
                         ...internalLoans[i],
-                        amount: internalLoans[i].amount - internalLoans[i].repay
+                        amount: internalLoans[i].amount - repay
                     }
                 }
                 currentDate = new Date(currentDate.setMonth(currentDate.getMonth() + 1));
@@ -207,9 +204,10 @@
         datasets: results.map(({ label, data }, i) => ({
             label: label,
             data: data,
-            backgroundColor: COLORS[i],
             borderColor: COLORS[i],
-            borderWidth: 1
+            borderWidth: 2,
+            pointBorderWidth: 3,
+            pointStyle: 'rect'
         }))
     })
 
@@ -222,15 +220,26 @@
             type: 'line',
             data: getChartJsResults([
                 {
-                    label: $("input[name='fieldselection']:checked").val(),
+                    label: $("input[name='fieldselection-a']:checked").val(),
                     data: calculateRate({
                         loans,
                         forecast: RATE_FORECASTS.find(forecast => forecast.name === $("input[name='forecastselection']:checked").val()).forecast,
-                        selector: $("input[name='fieldselection']:checked").val(),
+                        selector: $("input[name='fieldselection-a']:checked").val(),
+                    })
+                },
+                {
+                    label: $("input[name='fieldselection-b']:checked").val(),
+                    data: calculateRate({
+                        loans,
+                        forecast: RATE_FORECASTS.find(forecast => forecast.name === $("input[name='forecastselection']:checked").val()).forecast,
+                        selector: $("input[name='fieldselection-b']:checked").val(),
                     })
                 }
             ]),
-            options: { scales: { y: { beginAtZero: true } } }
+            options: {
+                scales: { y: { beginAtZero: true } },
+                tension: 0.1,
+            }
         });
     }
     const renderLoans = () => {
@@ -253,6 +262,7 @@
 
             $(`#removeLoan-${i}`).click(() => {
                 loans.splice(i, 1)
+                localStorage.setItem("loans", JSON.stringify(loans));
                 renderLoans();
                 renderData();
             })
@@ -266,12 +276,14 @@
             amount: parseFloat($("input[name='amount']").val())
 
         })
+        localStorage.setItem("loans", JSON.stringify(loans));
         renderLoans();
         renderData();
     }
 
     $(document).ready(() => {
         const selects = {
+            NONE,
             AMOUNT,
             RATE_PER_MONTH,
             RATE_PER_MONTH_USING_BANK_RATE,
@@ -281,19 +293,39 @@
             BANK_RATE
         };
 
-        Object.keys(selects).map((prop, i) => $("#fields").append($(
-            `<label class="radio field-radios"> <input type="radio" id="fieldselection-${i}" name="fieldselection" value="${selects[prop]}"> ${selects[prop]} </label><br>`
+        Object.keys(selects).map((prop, i) => $("#fields-a").append($(
+            `<label class="radio field-radios"> <input type="radio" id="fieldselection-a-${i}" name="fieldselection-a" value="${selects[prop]}"> ${selects[prop]} </label><br>`
+        )));
+
+        Object.keys(selects).map((prop, i) => $("#fields-b").append($(
+            `<label class="radio field-radios"> <input type="radio" id="fieldselection-b-${i}" name="fieldselection-b" value="${selects[prop]}"> ${selects[prop]} </label><br>`
         )));
 
         RATE_FORECASTS.map((forecast, i) => $("#forecasts").append($(
-            `<label class="radio forecast-radios"> <input type="radio" id="forecastselection-${i}" name="forecastselection" value="${forecast.name}"> ${forecast.name} </label><br>`
+            `
+            <div class="block">
+                <label class="radio forecast-radios"> <input type="radio" id="forecastselection-${i}" name="forecastselection" value="${forecast.name}"> ${forecast.name} </label><br>
+                <a href="${forecast.link}" target="_blank">Länk</a>
+            </div>
+`
         )));
 
 
-        $(".field-radios").click(renderData);
-        $(".forecast-radios").click(renderData);
+        $(".field-radios").click(($e) => {
+            renderData();
+            $([document.documentElement, document.body]).animate({
+                scrollTop: $("#chart").offset().top
+            }, 1);
+        });
+        $(".forecast-radios").click(($e) => {
+            renderData();
+            $([document.documentElement, document.body]).animate({
+                scrollTop: $("#chart").offset().top
+            }, 1);
+        });
 
-        $('#fieldselection-1').attr('checked', 'checked');
+        $('#fieldselection-a-2').attr('checked', 'checked');
+        $('#fieldselection-b-0').attr('checked', 'checked');
         $('#forecastselection-0').attr('checked', 'checked');
 
         renderLoans();
