@@ -9,40 +9,75 @@
             crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.css">
 </head>
-<body style="padding: 40px">
-<div class="table" style="padding: 40px;min-height:30vh; min-width:60vw">
+<body style="padding-top: 40px">
+<div class="container" style="margin-bottom: 25px;">
+    <div class="notification is-success table">
+        <div class="block">
+            <h2 class="is-size-3">1. Ange dina lån</h2>
+        </div>
+        <div class="columns">
+            <label class="column has-text-centered is-size-5" for="amount">Lånebelopp </label>
+            <label class="column has-text-centered is-size-5" for="rate">Räntesats (%)</label>
+            <label class="column has-text-centered is-size-5" for="payoff">Amortering per månad</label>
+            <label class="column has-text-centered is-size-5" for="date">Villkorsändringsdatum</label>
+            <label class="column has-text-centered is-size-5" for="addLoan"></label>
+        </div>
 
-    <div class="columns">
-        <label class="column" for="amount">Lånebelopp </label>
-        <label class="column" for="rate">Räntesats (%)</label>
-        <label class="column" for="payoff">Amortering per månad</label>
-        <label class="column" for="date">Villkorsändringsdatum</label>
-        <label class="column" for="addLoan"></label>
+        <form class="columns" id="a" onsubmit="addLoans(); return false;">
+            <div class="column has-text-centered">
+                <input type="number" class="input" form="a" placeholder="100000" name="amount" id="amount" required>
+            </div>
+            <div class="column has-text-centered">
+                <input type="number" class="input" form="a" placeholder="2%" name="rate" id="rate" required>
+            </div>
+            <div class="column has-text-centered">
+                <input type="number" class="input" form="a" placeholder="5000" name="payoff" id="payoff" required>
+            </div>
+            <div class="column has-text-centered">
+                <input type="date" class="input" form="a" placeholder="2023-04-01" name="date" id="date" required>
+            </div>
+            <div class="column has-text-centered">
+                <input type="submit" class="button" name="date" id="addLoan" value="Lägg till">
+            </div>
+        </form>
     </div>
+</div>
 
-    <div class="columns">
-        <div class="field-amount column">
-            <input type="number" class="input" placeholder="100000" name="amount" id="amount">
+<div class="container" style="margin-bottom: 25px;">
+
+    <div class="notification is-success">
+
+
+        <div class="block">
+            <h2 class="is-size-3">2. Välj data att visa</h2>
         </div>
-        <div class="field-rate column">
-            <input type="number" class="input" placeholder="2%" name="rate" id="rate">
+
+        <div class="columns">
+            <label class="column is-size-5">Prognos</label>
+            <label class="column is-size-5">Datapunkt</label>
         </div>
-        <div class="field-payoff column">
-            <input type="number" class="input" placeholder="5000" name="payoff" id="payoff">
+
+        <div class="columns">
+            <div id="forecasts" class="column control"></div>
+            <div id="fields" class="column control"></div>
         </div>
-        <div class="field-date column">
-            <input type="date" class="input" placeholder="2023-04-01" name="date" id="date">
+
+
+    </div>
+</div>
+
+
+<div class="container">
+    <div class="notification is-success">
+        <div class="block">
+            <h2 class="is-size-3">3. Tada!</h2>
         </div>
-        <div class="field-date column">
-            <input type="button" class="button" name="date" id="addLoan" value="Lägg till">
+        <div class="chart-container container" style="position: relative">
+            <canvas id="chart"></canvas>
         </div>
     </div>
 </div>
 
-<div id="fields" class="control"></div>
-<div class="chart-container" style="position: relative; height:30vh; width:60vw">
-    <canvas id="chart"></canvas>
-</div>
 <script>
     let theChart;
     const RATE_FORECASTS = [
@@ -79,17 +114,23 @@
         }
     ]
 
-    let loans = [];
+    let loans = [{
+        "rates": [["2023-08-25", "2.26%"]],
+        "repay": 1771,
+        "amount": 902805
+    }];
 
     const AMOUNT = 'Total lån';
     const RATE_PER_MONTH = 'Ränta per månad';
     const RATE_PER_MONTH_USING_BANK_RATE = 'Ränta per månad med bankens ränta';
-    const RATE_AND_REPAY = 'Inklusive amortering';
+    const RATE_DIFF = 'Besparing per månad p.g.a. nuvarande bindningar';
+    const RATE_AND_REPAY = 'Ränta + amortering per månad';
     const AVG_RATE = 'Min snittränta';
-    const BANK_RATE = 'Bankens rörliga ränta';
+    const BANK_RATE = 'Prognostiserad rörliga ränta';
 
     const COLORS = ['red', 'blue', 'green', 'yellow', 'teal', 'magenta', 'cyan'];
 
+    const butNice = (num) => num.toLocaleString('sv-SE').split(',')[0];
     const getPrintDays = () => {
         let printDays = [];
         let currentDate = new Date("2022-07-01")
@@ -129,6 +170,7 @@
             [AMOUNT]: getLoanSize(loans),
             [RATE_PER_MONTH]: monthlyRateAtDate(internalForecasts, loans, date),
             [RATE_PER_MONTH_USING_BANK_RATE]: monthlyBankRateAtDate(internalForecasts, loans, date),
+            [RATE_DIFF]: monthlyBankRateAtDate(internalForecasts, loans, date) - monthlyRateAtDate(internalForecasts, loans, date),
             [RATE_AND_REPAY]: getPayoffPerMonth(loans) + monthlyRateAtDate(internalForecasts, loans, date),
             [AVG_RATE]: avgRateAtDate(internalForecasts, loans, date),
             [BANK_RATE]: getRate(internalForecasts, [], date),
@@ -160,7 +202,6 @@
         }, []);
     }
 
-
     const getChartJsResults = (results) => ({
         labels: getPrintDays().map(date => date.toISOString().split('T')[0]),
         datasets: results.map(({ label, data }, i) => ({
@@ -172,95 +213,92 @@
         }))
     })
 
-
     const renderData = () => {
         console.log('about to render');
         const ctx = document.getElementById('chart').getContext('2d');
         theChart && theChart.destroy && theChart.destroy();
+
         theChart = new Chart(ctx, {
             type: 'line',
             data: getChartJsResults([
                 {
-                    label: 'Template',
+                    label: $("input[name='fieldselection']:checked").val(),
                     data: calculateRate({
                         loans,
-                        forecast: RATE_FORECASTS[1].forecast,
+                        forecast: RATE_FORECASTS.find(forecast => forecast.name === $("input[name='forecastselection']:checked").val()).forecast,
                         selector: $("input[name='fieldselection']:checked").val(),
                     })
                 }
             ]),
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
+            options: { scales: { y: { beginAtZero: true } } }
         });
     }
     const renderLoans = () => {
-        console.log('about to render loans');
         $(".renderedLoan").remove()
         loans.map(({ rates, repay, amount }, i) => {
 
             $(".table").append($(
                 `
-                <div class="columns renderedLoan">
-                    <label class="column">${amount}</label>
-                    <label class="column">${rates[0][1]}</label>
-                    <label class="column">${repay}</label>
-                    <label class="column">${rates[0][0]}</label>
-                    <div class="column">
-                          <input type="button" class="button" name="removeLoan" id="removeLoan-${i}" value="x">
+                <div class="columns renderedLoan is-flex is-vcentered" style="border-bottom: 1px white solid">
+                    <label class="column has-text-centered is-align-items-center">${butNice(amount)} kr</label>
+                    <label class="column has-text-centered">${rates[0][1]}</label>
+                    <label class="column has-text-centered">${butNice(repay)} kr</label>
+                    <label class="column has-text-centered">${rates[0][0]}</label>
+                    <div class="column has-text-centered">
+                          <input type="button" class="button" name="removeLoan" id="removeLoan-${i}" value="🗑️">
                     </div>
                 </div>
             `
             ))
 
             $(`#removeLoan-${i}`).click(() => {
-                console.log(`removeLoan-${i}`)
                 loans.splice(i, 1)
                 renderLoans();
                 renderData();
             })
-
-
         });
     }
 
+    const addLoans = () => {
+        loans.push({
+            rates: [[$("input[name='date']").val(), `${$("input[name='rate']").val()}%`]],
+            repay: parseFloat($("input[name='payoff']").val()),
+            amount: parseFloat($("input[name='amount']").val())
 
-    $(document).ready(function () {
-        const selects = {
-            AMOUNT: 'Total lån',
-            RATE_PER_MONTH: 'Ränta per månad',
-            RATE_PER_MONTH_USING_BANK_RATE: 'Ränta per månad med bankens ränta',
-            RATE_AND_REPAY: 'Inklusive amortering',
-            AVG_RATE: 'Min snittränta',
-            BANK_RATE: 'Bankens rörliga ränta',
-        }
-
-        Object.keys(selects).map(prop => $("#fields").append($(
-            `<label class="radio radiobtns"> <input type="radio" name="fieldselection" value="${selects[prop]}"> ${selects[prop]} </label><br>`
-        )));
-    });
-
+        })
+        renderLoans();
+        renderData();
+    }
 
     $(document).ready(() => {
-            $(".radiobtns").click(renderData);
+        const selects = {
+            AMOUNT,
+            RATE_PER_MONTH,
+            RATE_PER_MONTH_USING_BANK_RATE,
+            RATE_DIFF,
+            RATE_AND_REPAY,
+            AVG_RATE,
+            BANK_RATE
+        };
 
-            $("#addLoan").click(() => {
+        Object.keys(selects).map((prop, i) => $("#fields").append($(
+            `<label class="radio field-radios"> <input type="radio" id="fieldselection-${i}" name="fieldselection" value="${selects[prop]}"> ${selects[prop]} </label><br>`
+        )));
 
-                loans.push({
-                    rates: [[$("input[name='date']").val(), `${$("input[name='rate']").val()}%`]],
-                    repay: parseFloat($("input[name='payoff']").val()),
-                    amount: parseFloat($("input[name='amount']").val())
+        RATE_FORECASTS.map((forecast, i) => $("#forecasts").append($(
+            `<label class="radio forecast-radios"> <input type="radio" id="forecastselection-${i}" name="forecastselection" value="${forecast.name}"> ${forecast.name} </label><br>`
+        )));
 
-                })
-                renderLoans();
-                renderData();
-            });
-        }
-    )
+
+        $(".field-radios").click(renderData);
+        $(".forecast-radios").click(renderData);
+
+        $('#fieldselection-1').attr('checked', 'checked');
+        $('#forecastselection-0').attr('checked', 'checked');
+
+        renderLoans();
+        renderData();
+    })
 </script>
 </body>
 </html>
