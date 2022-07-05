@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>GraphTest</title>
+    <title>Ränta</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.8.0/dist/chart.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"
             integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
@@ -14,13 +14,14 @@
     <div class="notification is-link">
         <div class="block">
             <p class="is-size-4">Ett enkelt verktyg för att överblicka din personliga ökande räntekostnad</p>
-            <p>Mata in dina lån och få kommande räntehöjningar visualiserade. Lånen går automatiskt över till rörlig ränta enligt vald prognos vid villkorsändringsdatum.</p>
-            <p>Ingen data samlas in eller lagras, allt stannar på din dator.</p>
+            <p>Mata in dina lån och få kommande räntehöjningar visualiserade. Lånen går automatiskt över till rörlig
+                ränta enligt vald prognos vid villkorsändringsdatum.</p>
+            <p>Ingen data samlas in eller lagras på servrar, allt stannar på din dator.</p>
         </div>
     </div>
 </div>
 <div class="container" style="margin-bottom: 25px;">
-    <div class="notification is-success table">
+    <div class="notification is-info table">
         <div class="block">
             <h2 class="is-size-4">1. Ange dina lån</h2>
         </div>
@@ -53,8 +54,8 @@
     </div>
 </div>
 
-<div class="container" style="margin-bottom: 25px;">
-    <div class="notification is-success">
+<div class="container" style="margin-bottom: 25px;" id="selection-container">
+    <div class="notification is-info">
         <div class="block">
             <h2 class="is-size-4">2. Välj data att visa</h2>
         </div>
@@ -86,6 +87,7 @@
 
 <script>
     let theChart;
+    let mode = "kr";
     const RATE_FORECASTS = [
         {
             description: "Finansdepartementets styrränteprognos från 22 juni 2022, sträcker sig till 2025. Omräknad till bolåneränta genom: styrränta + 1.5%.",
@@ -165,8 +167,31 @@
     const AVG_RATE = 'Min snittränta';
     const BANK_RATE = 'Prognostiserad rörliga ränta';
 
+    const selects = {
+        NONE,
+        AMOUNT,
+        RATE_PER_MONTH,
+        RATE_AND_REPAY,
+        RATE_PER_MONTH_USING_BANK_RATE,
+        RATE_DIFF,
+        AVG_RATE,
+        BANK_RATE
+    };
+
+    const modes = {
+        [NONE]: '',
+        [AMOUNT]: 'kr',
+        [RATE_PER_MONTH]: 'kr',
+        [RATE_AND_REPAY]: 'kr',
+        [RATE_PER_MONTH_USING_BANK_RATE]: 'kr',
+        [RATE_DIFF]: 'kr',
+        [AVG_RATE]: '%',
+        [BANK_RATE]: '%',
+    };
+
     const COLORS = ['red', 'blue', 'green', 'yellow', 'teal', 'magenta', 'cyan'];
 
+    const toPercent = (number) => `${(number * 100).toFixed(2)} %`
     const butNice = (num) => num.toLocaleString('sv-SE').split(',')[0];
     const getPrintDays = () => {
         let printDays = [];
@@ -248,11 +273,12 @@
             borderColor: COLORS[i],
             borderWidth: 2,
             pointBorderWidth: 3,
-            pointStyle: 'rect'
+            pointStyle: 'rect',
+
         }))
     })
 
-    const renderData = () => {
+    const renderChart = () => {
         theChart && theChart.destroy && theChart.destroy();
         theChart = new Chart(document.getElementById('chart').getContext('2d'), {
             type: 'line',
@@ -275,11 +301,25 @@
                 }
             ]),
             options: {
-                scales: { y: { beginAtZero: true } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => mode === '%' ? toPercent(value) : butNice(value) + ' kr'
+                        }
+                    },
+
+                },
                 tension: 0.1,
+                plugins: {
+                    tooltip: {
+                        callback: (value) => mode === '%' ? toPercent(value) : butNice(value) + ' kr'
+                    },
+                }
             }
         });
     }
+
     const renderLoans = () => {
         $(".renderedLoan").remove()
         loans.map(({ rates, repay, amount }, i) => {
@@ -302,7 +342,7 @@
                 loans.splice(i, 1)
                 localStorage.setItem("loans", JSON.stringify(loans));
                 renderLoans();
-                renderData();
+                renderChart();
             })
         });
     }
@@ -316,27 +356,34 @@
         })
         localStorage.setItem("loans", JSON.stringify(loans));
         renderLoans();
-        renderData();
+        renderChart();
     }
 
-    $(document).ready(() => {
-        const selects = {
-            NONE,
-            AMOUNT,
-            RATE_PER_MONTH,
-            RATE_PER_MONTH_USING_BANK_RATE,
-            RATE_DIFF,
-            RATE_AND_REPAY,
-            AVG_RATE,
-            BANK_RATE
-        };
+    const handleFieldSelection = (clickedSelector, otherListSelector) => {
+        const target = $(clickedSelector);
+        if (target.is(':disabled')) return;
+        mode = modes[target.val()];
+        $(otherListSelector).each(function () {
+            const el = $(this);
+            if (mode === '') return el.attr('disabled', false);
+            if (modes[el.val()] === '') return;
+            if (target.val() === el.val()) return el.attr('disabled', true);
+            if (mode !== modes[el.val()]) return el.attr('disabled', true);
+            if (mode === modes[el.val()]) return el.attr('disabled', false);
+        })
+        $([document.documentElement, document.body]).animate({
+            scrollTop: $("#selection-container").offset().top
+        }, 1);
+        renderChart();
+    }
 
+    const renderScreen = () => {
         Object.keys(selects).map((prop, i) => $("#fields-a").append($(
-            `<label class="radio field-radios"> <input type="radio" id="fieldselection-a-${i}" name="fieldselection-a" value="${selects[prop]}"> ${selects[prop]} </label><br>`
+            `<label class="radio field-radios-a"> <input type="radio" id="fieldselection-a-${i}" name="fieldselection-a" value="${selects[prop]}"> (${modes[selects[prop]]}) ${selects[prop]} </label><br>`
         )));
 
         Object.keys(selects).map((prop, i) => $("#fields-b").append($(
-            `<label class="radio field-radios"> <input type="radio" id="fieldselection-b-${i}" name="fieldselection-b" value="${selects[prop]}"> ${selects[prop]} </label><br>`
+            `<label class="radio field-radios-b"> <input type="radio" id="fieldselection-b-${i}" name="fieldselection-b" value="${selects[prop]}"> (${modes[selects[prop]]}) ${selects[prop]} </label><br>`
         )));
 
         RATE_FORECASTS.map((forecast, i) => $("#forecasts").append($(
@@ -359,27 +406,37 @@
 </div>
 `
         )));
+    }
 
-
-        $(".field-radios").click(($e) => {
-            renderData();
-            $([document.documentElement, document.body]).animate({
-                scrollTop: $("#chart").offset().top
-            }, 1);
-        });
-        $(".forecast-radios").click(($e) => {
-            renderData();
-            $([document.documentElement, document.body]).animate({
-                scrollTop: $("#chart").offset().top
-            }, 1);
+    const registerEventHandlers = () => {
+        $("input[name='fieldselection-a']").click(function () {
+            handleFieldSelection(this, "input[name='fieldselection-b']");
         });
 
-        $('#fieldselection-a-2').attr('checked', 'checked');
-        $('#fieldselection-b-0').attr('checked', 'checked');
+        $("input[name='fieldselection-b']").click(function (e) {
+            handleFieldSelection(this, "input[name='fieldselection-a']");
+        });
+
+        $(".forecast-radios").click(() => {
+            $([document.documentElement, document.body]).animate({
+                scrollTop: $("#selection-container").offset().top
+            }, 1);
+            renderChart();
+        });
+    }
+
+    const preselectValues = () => {
         $('#forecastselection-0').attr('checked', 'checked');
+        $('#fieldselection-a-2').click();
+        $('#fieldselection-b-0').click();
+    }
 
+    $(document).ready(() => {
+        renderScreen();
+        registerEventHandlers();
+        preselectValues();
         renderLoans();
-        renderData();
+        renderChart();
     })
 </script>
 </body>
