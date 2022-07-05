@@ -1,2 +1,5 @@
 # rate-fuss
-See what the fuss all about, for you
+See what the rate fuss is all about, for you.
+
+Hosted at https://rate-fuss.vercel.app/
+
